@@ -3,11 +3,16 @@
 # Add steps that build, run tests, deploy, and more:
 # https://aka.ms/yaml
 
+# Trigger command is what initiates this pipeline. In this case, whenever a change is made to the main branch, trigger pipeline initiation
+
 trigger:
 - main
 
 variables:
-  # Container registry service connection established during pipeline creation
+  # Container registry service connection established during pipeline creation. 
+  #Service connections are a key object as it grants permission to azure services
+  #BuildID tag is to number the build versions for subsequent builds
+
   dockerRegistryServiceConnection: 'webinar-acr-connection'
   imageRepository: 'webinar-web-app'
   containerRegistry: 'webinaracr.azurecr.io'
@@ -17,11 +22,17 @@ variables:
   vmImageName: 'ubuntu-latest'
 
 #Stages
+#display name is the name you'll see the logs when pipeline is running
+#Pool: this is the allocated build agent (VM) to run the job. for docker related jobs, you need linux machine
 stages:
 - stage: My_Environment
   displayName: Print Params, Test, Build and Push Stage
+  
   jobs:
   # Print all the parameters
+  # 1st job here is to Print all parameters. this is helpful when researching a pipeline and view its history for all parameters.
+  # a typical enterprise script will contain 100s of parameters
+
   - job: Print_Parameters
     displayName: Print Parameters
     pool:
@@ -33,12 +44,15 @@ stages:
         script: |
           echo 'Print All Parameters:'
           echo 'Service Connection: ' $(dockerRegistryServiceConnection)
-          echo '`Image Repository: ' $(imageRepository)
+          echo 'Image Repository: ' $(imageRepository)
           echo 'Azure container Registry: ' $(containerRegistry)
           echo 'Dockerfile Path: ' $(dockerfilePath)
           echo 'Build ID: ' $(tag)
           echo 'VM Image Name: ' $(vmImageName)
+
   # Run npm install and npm test
+  # Application test job is to install the node modules from the package json file and run the unit tests. 
+
   - job: Application_Tests
     displayName: Npm Install and Npm Test
     dependsOn: Print_Parameters
@@ -54,6 +68,9 @@ stages:
         command: 'custom'
         customCommand: 'run test'
   # Build an image from Dockerfile and push it to the Azure Container Registry, publish the Artifact for Release Pipeline
+  # Most important job in the pipeline: 2 tasks involved in this 1 job: Build and push, then publish. How is access granted into the private registry?
+  # specify the command, repository, dockerfile and then container registry. 
+
   - job: Build
     displayName: Build
     dependsOn: Application_Tests
